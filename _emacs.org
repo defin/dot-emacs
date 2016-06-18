@@ -1,4 +1,4 @@
-* Prelude
+* Environment
 #+begin_src emacs-lisp
 (cond ((and (string= window-system "ns")
             (fboundp 'aquamacs-homepage))
@@ -13,13 +13,20 @@
        (defvar which-emacs 'tty)))
 
 (require 'cl)
+
+(setenv "TMPDIR" "/tmp")
+
+(setq epg-gpg-program "/usr/local/bin/gpg")
+
+(message "* Environment")
 #+end_src
 
 * UI
 ** Solarized
 #+begin_src emacs-lisp
-;(load-theme 'solarized-light t)
-;(load-theme 'solarized-dark t)
+(set-frame-parameter nil 'background-mode 'dark)
+(load-theme 'solarized t)
+(message "* UI")
 #+end_src
 ** Display
 #+begin_src emacs-lisp
@@ -50,12 +57,18 @@
       (setq tooltip-use-echo-area t) ; obsolete since 24.1
     (tooltip-mode -1))
 
-  (setq visible-bell t)
+  ;(setq visible-bell t)
 
   (setq minimap-window-location 'right)
 
+(setq use-dialog-box nil)
+(setq initial-scratch-message nil)
+
+
 (blink-cursor-mode 0)
 (setq x-stretch-cursor t)
+(winner-mode 1)
+(message "** Display")
 #+end_src
 
 ** Fonts
@@ -63,6 +76,7 @@
   (require 'font-lock)
   (setq font-lock-maximum-decoration t)
   (global-font-lock-mode t)
+(message "** Fonts")
 #+end_src
 ** Keys
 #+begin_src emacs-lisp
@@ -83,43 +97,120 @@
   (global-set-key (kbd "C-x C-c") '(lambda () (interactive))))
 
 (setq next-line-add-newlines nil)
+
+;; Make C-h a act as C-u C-h a
+(setq apropos-do-all t)
+
+;; For C-u C-x v d. Probably a good idea for everything else too
+(setq completion-ignore-case t)
+
+(setq backward-delete-char-untabify nil)
+
+(defadvice kill-ring-save (before slickcopy activate compile)
+  "When called interactively with no active region, copy
+ a single line instead."
+  (interactive
+   (if mark-active (list (region-beginning) (region-end))
+     (list (line-beginning-position)
+           (line-beginning-position 2)))))
+
+(defadvice kill-region (before slickcut activate compile)
+  "When called interactively with no active region, kill
+ a single line instead."
+  (interactive
+   (if mark-active (list (region-beginning) (region-end))
+     (list (line-beginning-position)
+           (line-beginning-position 2)))))
+
+(defun kill-emacs-immediately ()
+  (interactive)
+  (let ((kill-emacs-hook nil))
+    (if (yes-or-no-p "Kill emacs without running hooks?")
+        (kill-emacs))))
+
+(message "** Keys")
 #+end_src
 
-** IDO
+** Recentf
 #+begin_src emacs-lisp
-(ido-mode 'buffers) ; 'both
-(setq ido-everywhere t)
-(setq ido-max-directory-size 100000)
-(setq ido-create-new-buffer 'always)
-
 (require 'recentf)
-
-;; get rid of `find-file-read-only' and replace it with something
-;; more useful.
-(global-set-key (kbd "C-x C-r") 'ido-recentf-open)
-
-;; enable recent files mode.
 (recentf-mode t)
 
 ; 50 files ought to be enough.
 (setq recentf-max-saved-items 50)
 
-(defun ido-recentf-open ()
-  "Use `ido-completing-read' to \\[find-file] a recent file"
-  (interactive)
-  (if (find-file (ido-completing-read "Find recent file: " recentf-list))
-      (message "Opening file...")
-    (message "Aborting")))
+(message "** Recentf")
 #+end_src
+
+** IDO
+#+begin_src emacs-lisp
+;(ido-mode 'buffers) ; 'both
+;(setq ido-everywhere nil) ;t
+;(setq ido-max-directory-size 100000)
+;(setq ido-create-new-buffer 'always)
+
+
+
+;; get rid of `find-file-read-only' and replace it with something
+;; more useful.
+;(global-set-key (kbd "C-x C-r") 'ido-recentf-open)
+
+;(defun ido-recentf-open ()
+;  "Use `ido-completing-read' to \\[find-file] a recent file"
+;  (interactive)
+;  (if (find-file (ido-completing-read "Find recent file: " recentf-list))
+;      (message "Opening file...")
+;    (message "Aborting")))
+(message "** IDO")
+#+end_src
+** Helm
+#+begin_src emacs-lisp
+  ;(require 'recentf)
+
+  ;(require 'helm-config)
+  ;(helm-mode 1)
+  ;(global-set-key (kbd "C-c h") 'helm-command-prefix)
+
+  ;(define-key helm-map (kbd "<tab>") 'helm-execute-persistent-action) ; rebind tab to run persistent action
+  ;(define-key helm-map (kbd "C-i") 'helm-execute-persistent-action) ; make TAB works in terminal
+  ;(define-key helm-map (kbd "C-z")  'helm-select-action) ; list actions using C-z
+
+  ;(when (executable-find "curl")
+  ;  (setq helm-google-suggest-use-curl-p t))
+
+  (setq helm-split-window-in-side-p           t ; open helm buffer inside current window, not occupy whole other window
+        helm-move-to-line-cycle-in-source     t ; move to end or beginning of source when reaching top or bottom of source.
+        helm-ff-search-library-in-sexp        t ; search for library in `require' and `declare-function' sexp.
+        helm-scroll-amount                    8 ; scroll 8 lines other window using M-<next>/M-<prior>
+        helm-ff-file-name-history-use-recentf t)
+
+
+  ;(global-set-key (kbd "M-x") 'helm-M-x)
+  ;(setq helm-M-x-fuzzy-match t)
+
+  ;(global-set-key (kbd "C-x C-b") 'helm-mini)
+
+  ;(setq helm-buffers-fuzzy-matching t
+  ;      helm-recentf-fuzzy-match    t)
+
+  ;(global-set-key (kbd "C-x C-f") 'helm-find-files)
+
+
+;  (add-hook 'after-save-hook 'helm-backup-versioning)
+(message "** Helm")
+#+end_src
+
 ** Icomplete
 #+begin_src emacs-lisp
 (setq icomplete-mode t)
+(message "** Icomplete")
 #+end_src
 
 ** Minibuffer
 #+begin_src emacs-lisp
   (setq enable-recursive-minibuffers t)
   (minibuffer-depth-indicate-mode)
+(message "** Minibuffer")
 #+end_src
 ** Eliminate Annoying Prompts and Messages
 #+begin_src emacs-lisp
@@ -134,6 +225,13 @@
   (eval-after-load "startup" '(fset 'display-startup-echo-area-message (lambda ())))
 
   (put 'narrow-to-region 'disabled nil)
+(put 'not-modified 'disabled t)
+(put 'upcase-region 'disabled nil)
+(put 'downcase-region 'disabled nil)
+(put 'erase-buffer 'disabled nil)
+(put 'dired-find-alternate-file 'disabled nil)
+
+(message "** Eliminate Annoying Prompts and Messages")
 #+end_src
 
 ** Helpers
@@ -144,17 +242,40 @@
   (browse-url
    (concat "https://duckduckgo.com/?q="
            (replace-regexp-in-string " " "+" text))))
+(message "** Helpers")
 #+end_src
 * Files & Paths
 #+begin_src emacs-lisp
-(push (expand-file-name "~/.emacs.d/src") load-path)
-(filesets-init)
+  (push (expand-file-name "~/.emacs.d/src") load-path)
+
+  (push (expand-file-name "/opt/local/bin") exec-path)
+  (push (expand-file-name "~/bin") exec-path)
+
+  (setenv "PATH" (reduce (lambda (a b)
+                           (concat a ":" b))
+                         `(,(expand-file-name "~/bin")
+                           "/opt/local/bin"
+                           ,(getenv "PATH"))))
+
+  (filesets-init)
+
+(setq locale-coding-system 'utf-8)
+(set-terminal-coding-system 'utf-8)
+(set-keyboard-coding-system 'utf-8)
+(set-selection-coding-system 'utf-8)
+(setq file-name-coding-system 'utf-8)
+(prefer-coding-system 'utf-8)
+
+
+
+(message "* Files & Paths")
 #+end_src
 ** Desktop
 #+begin_src emacs-lisp
   (setq desktop-dirname "~/.emacs.d/")
   (desktop-save-mode 1)
   (setq desktop-save t)
+(message "** Desktop")
 #+end_src
 ** Packages
 #+begin_src emacs-lisp
@@ -162,6 +283,9 @@
                '("melpa" . "http://melpa.org/packages/") t)
   (add-to-list 'package-archives
                '("marmalade" . "http://marmalade-repo.org/packages/"))
+
+(package-initialize)
+(message "** Packages")
 #+end_src
 ** Trash
 #+begin_src emacs-lisp
@@ -169,12 +293,15 @@
 ;(setq system-trash-exclude-matches '("#[^/]+#$" ".*~$" "\\.emacs\\.desktop.*"))
 ;(setq system-trash-exclude-paths '("/tmp"))
 ;(setq trash-directory ????)
+(message "** Trash")
 #+end_src
 ** Dired
 #+begin_src emacs-lisp
   (require 'dired-x)
   (require 'find-dired)
   (setq find-ls-option '("-print0 | xargs -0 ls -ld" . "-ld"))
+  (setq dired-use-ls-dired nil)
+(message "** Dired")
 #+end_src
 ** Version Backups
 #+begin_src emacs-lisp
@@ -202,6 +329,7 @@
         (delete-file file))))
 
   (setq vc-make-backup-files t)
+(message "** Version Backups")
 #+end_src
 
 ** Uniquify buffer names
@@ -211,11 +339,13 @@
   (setq uniquify-strip-common-suffix t)
   (setq uniquify-separator " ")
   (setq uniquify-trailing-separator-p t)
+(message "** Uniquify buffer names")
 #+end_src
 ** Customize
 #+begin_src emacs-lisp
-;  (setq custom-file "~/.emacs.d/emacs-custom.el")
-;  (load custom-file)
+  (setq custom-file "~/.emacs.d/emacs-custom.el")
+  (load custom-file)
+(message "** Customize")
 #+end_src
 
 ** Auto commit
@@ -240,6 +370,7 @@
   ;;; VC config
   (require 'vc)
   (setq vc-handled-backends '(Hg Git SVN))
+(message "** Auto commit")
 #+end_src
 
 * Programming
@@ -265,17 +396,16 @@
   ;            (delete-trailing-whitespace)))
 
   (dolist (hook '(clojure-mode-hook
-                  cider-repl-mode-hook
+                  ;cider-repl-mode-hook
                   emacs-lisp-mode-hook
                   common-lisp-mode-hook
-                  inferior-lisp-mode-hook
-                  lisp-interaction-mode-hook
-                  ielm-mode-hook
+                  ;inferior-lisp-mode-hook
+                  ;lisp-interaction-mode-hook
+                  ;ielm-mode-hook
                   scheme-mode-hook))
     (add-hook hook
               (lambda ()
                 (paredit-mode t))))
-
 
   ;(setq blink-matching-paren t)
   ;(setq blink-matching-paren-delay .3)
@@ -284,9 +414,31 @@
   (setq show-paren-delay 0)
   (setq show-paren-style 'parenthesis)
 
+;; I don't want stuff like git to start a pager in shell-mode
+(setenv "PAGER" "/bin/cat")
+
+;;;;; Comint
+(setq comint-buffer-maximum-size (expt 2 16))
+(add-hook 'shell-mode-hook 'ansi-color-for-comint-mode-on)
+
+(dolist (mode '(c-mode
+                java-mode
+                cperl-mode
+                html-mode-hook
+                css-mode-hook 
+                emacs-lisp-mode))
+  (font-lock-add-keywords mode
+                          '(("\\(XXX\\|FIXME\\|TODO\\)" 
+                             1 font-lock-warning-face prepend))))
+
+
+
+
+(message "* Programming")
 #+end_src
 ** Emacs Lisp
 #+begin_src emacs-lisp
+(message "** Emacs Lisp")
 #+end_src
 ** Common Lisp
 #+begin_src emacs-lisp
@@ -302,35 +454,59 @@
 
   ;(setq inferior-lisp-program "/Users/df/lib/AllegroCL64-8/alisp")
   (setq inferior-lisp-program "/opt/local/bin/lisp") ; CMUCL
+(message "** Common Lisp")
 #+end_src
 
 ** Clojure
 #+begin_src emacs-lisp
-  (add-to-list 'auto-mode-alist '("\\.clj" . clojure-mode))
-  ;(add-hook 'cider-mode-hook 'cider-turn-on-eldoc-mode)
-  (setq cider-lein-command "/opt/local/bin/lein")
+    (add-to-list 'auto-mode-alist '("\\.clj" . clojure-mode))
+    ;(add-hook 'cider-mode-hook 'cider-turn-on-eldoc-mode)
+    (setq cider-lein-command "/Users/df/bin/lein")
 
-  (setq nrepl-log-messages t)
-  (setq nrepl-hide-special-buffers t)
+    (setq nrepl-log-messages t)
+    (setq nrepl-hide-special-buffers nil)
 
-  (setq cider-repl-result-prefix ";; => ")
+    (setq cider-repl-result-prefix ";; => ")
 
-  (setq cider-repl-wrap-history t)
+    (setq cider-repl-wrap-history t)
 
-  (setq cider-repl-history-size 10000)
+    (setq cider-repl-history-size 10000)
 
-  (setq cider-repl-history-file "~/.emacs.d/cider.history")
+    (setq cider-repl-history-file "~/.emacs.d/cider.history")
 
-  (add-hook 'cider-repl-mode-hook 'subword-mode)
+    (add-hook 'cider-repl-mode-hook 'subword-mode)
 
-  (global-set-key (kbd "<f1>") 'clojure-cheatsheet)
+    (global-company-mode)
 
-  ;(add-hook 'cider-repl-mode-hook 'paredit-mode)
+    ;(add-hook 'cider-repl-mode-hook 'company-mode)
+    ;(add-hook 'cider-mode-hook 'company-mode)
 
-  (global-company-mode)
+    (setq *cider-stdout-height* 10)
 
-  ;(add-hook 'cider-repl-mode-hook 'company-mode)
-  ;(add-hook 'cider-mode-hook 'company-mode)
+    (defun cider-stdout ()
+      (interactive)
+      (let* ((repl-buffer (buffer-name (current-buffer)))
+             (stdout-buffer (replace-regexp-in-string "\\*cider-repl \\([^*]+\\)\\*"
+                                                      (if nrepl-hide-special-buffers 
+                                                          " *nrepl-server \\1*"
+                                                        "*nrepl-server \\1*")
+                                                      repl-buffer)))
+        (if (string-prefix-p "*cider-repl" repl-buffer)
+            (let* ((windows (get-buffer-window-list stdout-buffer))
+                   (stdout-window (or (and windows (first windows))
+                                      (split-window-vertically)))) ; set current window to repl?
+              (with-selected-window stdout-window
+                (window-resize-no-error stdout-window (- (1+ *cider-stdout-height*) (window-size)))
+                (switch-to-buffer stdout-buffer t t)
+                (set (make-local-variable 'window-point-insertion-type) t)
+                (goto-char (point-max))))
+          (error "Current buffer must be the cider-repl to get stdout for."))))
+
+    ;(add-hook 'cider-repl-mode-hook '(lambda () 
+    ;                                   (cider-stdout)
+    ;                                   (define-key cider-repl-mode-map (kbd "C-c C-M-o") 'cider-stdout)))
+    
+(message "** Clojure")
 #+end_src
 ** Python
 #+begin_src emacs-lisp
@@ -348,6 +524,8 @@
 
 ;  (add-hook 'python-mode-hook 'jedi:setup)
 ;  (setq jedi:complete-on-dot t)
+
+  (message "** Python")
 #+end_src
 
 ** Objective C
@@ -393,6 +571,7 @@
           (compile "xcodebuild -configuration Debug")
         (compile "make"))))
 
+(message "** Objective C")
 #+end_src
 
 ** JavaScript
@@ -400,6 +579,7 @@
   (push (expand-file-name "~/.emacs.d/src/js2-mode") load-path)
   (autoload 'js2-mode "js2-mode" nil t)
   (add-to-list 'auto-mode-alist '("\\.js$" . js2-mode))
+(message "** JavaScript")
 #+end_src
 
 ** HTML
@@ -408,6 +588,7 @@
   (while (let ((e (rassoc 'html-helper-mode auto-mode-alist)))
            (when e
              (rplacd e 'xml-mode))))
+(message "** HTML")
 #+end_src
 
 ** Magit
@@ -416,33 +597,122 @@
   (global-set-key (kbd "C-x g") 'magit-status)
 
   (require 'git-gutter-fringe)
-;  (global-git-gutter-mode t)
-  (setq git-gutter-fr:side 'right-fringe)
+  (global-git-gutter-mode t)
+  (setq git-gutter-fr:side 'left-fringe)
+
+(set-face-foreground 'git-gutter-fr:modified "blue3")
+(set-face-foreground 'git-gutter-fr:added    "yellow4")
+(set-face-foreground 'git-gutter-fr:deleted  "red4")
+
+
+; (fringe-helper-define 'git-gutter-fr:added nil
+;   ".XXXXXX."
+;   "XX....XX"
+;   "X......X"
+;   "X......X"
+;   "XXXXXXXX"
+;   "X......X"
+;   "X......X")
+
+; (fringe-helper-define 'git-gutter-fr:deleted nil
+;   "XXXXX.."
+;   "X....X."
+;   "X.....X"
+;   "X.....X"
+;   "X.....X"
+;   "X....X."
+;   "XXXXX..")
+
+; (fringe-helper-define 'git-gutter-fr:modified nil
+;   "XXXXXXX"
+;   "X..X..X"
+;   "X..X..X"
+;   "X..X..X"
+;   "X..X..X"
+;   "X..X..X"
+;   "X..X..X")
+
+;  (setq magit-last-seen-setup-instructions "1.4.0")
+
+;(add-hook 'magit-status-sections-hook 'magit-insert-repo-header t)
+(add-hook 'magit-status-sections-hook 'magit-insert-remote-header t)
+
+            
+
+(message "** Magit")
 #+end_src
+** Ediff
+#+begin_src emacs-lisp
+  (setq ediff-window-setup-function 'ediff-setup-windows-plain)
+
+  ;; only hilight current diff:
+  ;(setq-default ediff-highlight-all-diffs 'nil)
+
+  (add-hook 'ediff-load-hook
+            (lambda ()
+              (set-face-foreground ediff-current-diff-face-A "black")
+              (set-face-background ediff-current-diff-face-A "#ffdddd")
+              (set-face-foreground ediff-fine-diff-face-A "black")
+              (set-face-background ediff-fine-diff-face-A "#ffdddd")
+              (set-face-foreground ediff-even-diff-face-A "black")
+              (set-face-background ediff-even-diff-face-A "grey40")
+              (set-face-foreground ediff-odd-diff-face-A "black")
+              (set-face-background ediff-odd-diff-face-A "grey60")
+
+              (make-face-italic ediff-fine-diff-face-A)
+              (make-face-italic ediff-fine-diff-face-B)
+              (make-face-italic ediff-fine-diff-face-C)
+
+              (set-face-foreground ediff-current-diff-face-B "yellow")
+              (set-face-background ediff-current-diff-face-B "#ddffdd")
+              (set-face-foreground ediff-fine-diff-face-B "yellow")
+              (set-face-background ediff-fine-diff-face-B "#ddffdd")
+              (set-face-foreground ediff-even-diff-face-B "yellow")
+              (set-face-background ediff-even-diff-face-B "grey40")
+              (set-face-foreground ediff-odd-diff-face-B "yellow")
+              (set-face-background ediff-odd-diff-face-B "grey60")
+
+              (set-face-foreground ediff-current-diff-face-C "white")
+              (set-face-background ediff-current-diff-face-C "#ffffaa")
+              (set-face-foreground ediff-fine-diff-face-C "white")
+              (set-face-background ediff-fine-diff-face-C "#ffffaa")
+              (set-face-foreground ediff-even-diff-face-C "white")
+              (set-face-background ediff-even-diff-face-C "grey40")
+              (set-face-foreground ediff-odd-diff-face-C "white")
+              (set-face-background ediff-odd-diff-face-C "grey60")))
+
+  ;; turn off whitespace checking:
+  (setq ediff-diff-options "-w")
+
+  (message "** Ediff")
+#+end_src
+
 ** SQLi
 #+begin_src emacs-lisp
-    (setq sql-connection-alist
-          '((local (sql-product 'postgres)
-                   (sql-port 5432)
-                   (sql-server "localhost")
-                   (sql-user "df")
-  ;                (sql-password "password")
-                   (sql-database "dedup"))))
+;(require 'sql-connections (expand-file-name "~/.emacs.d/sql-connections.el.gpg"))
 
-    (defvar sql-servers-list
-      '(("Local Server" local)))
+(setq sql-postgres-program "/opt/local/bin/psql")
+(setq sql-mysql-program "/opt/local/lib/mysql55/bin/mysql")
 
-    (defun db-connect (server)
-      (interactive (helm-comp-read "Select server: " sql-servers-list))
-      (setq sql-product 'postgres)
-      (sql-connect server))
+(add-hook 'sql-interactive-mode-hook
+          (lambda ()
+            (toggle-truncate-lines t)))
 
-  (add-hook 'sql-interactive-mode-hook
-            (lambda ()
-              (toggle-truncate-lines t)))
-
-  (setq sql-postgres-program "/Applications/Server.app/Contents/ServerRoot/usr/bin/psql")
-
+(defun sql-comint-postgres (product options)
+  "Create comint buffer and connect to Postgres."
+  (let ((connection-string (concat "postgresql://"
+                                   sql-user
+                                   ":"
+                                   sql-password
+                                   "@"
+                                   sql-server
+                                   ":"
+                                   (if (not (= 0 sql-port))
+                                       (number-to-string sql-port))
+                                   "/"
+                                   sql-database)))
+    (sql-comint product (append (list connection-string) options))))
+(message "** SQLi")
 #+end_src
 ** Tidy / Prettify Data
 #+begin_src emacs-lisp
@@ -463,19 +733,32 @@
 (defun pretty-xml ()
   (interactive)
   (tidyxml))
+(message "** Tidy / Prettify Data")
 #+end_src
 
 ** Dash
 #+begin_src emacs-lisp
-  (global-set-key "\C-cD" 'dash-at-point)
-  (global-set-key "\C-cd" 'dash-at-point-with-docset)
-  (add-to-list 'dash-at-point-mode-alist '(perl-mode . "perl"))
+;  (global-set-key "\C-cD" 'dash-at-point)
+;  (global-set-key "\C-cd" 'dash-at-point-with-docset)
+;  (add-to-list 'dash-at-point-mode-alist '(perl-mode . "perl"))
+(message "** Dash")
 #+end_src
 
-** Helm
+** Projectile
 #+begin_src emacs-lisp
-  (add-hook 'after-save-hook 'helm-backup-versioning)
+(projectile-global-mode)
+
+(setq projectile-completion-system 'default)
+
+  ;(setq projectile-switch-project-action 'helm-projectile)
+  ;(setq projectile-completion-system 'helm)
+  ;(helm-projectile-on)
+
+;(global-set-key (kbd "C-c h") 'helm-projectile)
+
+(message "** Projectile")
 #+end_src
+
 
 * Org Mode
 ** Setup
@@ -494,31 +777,34 @@
 (defun gtd ()
    (interactive)
    (find-file "~/org/gtd.org"))
+(message "* Org Mode")
 #+end_src
 
 ** Keys
 #+begin_src emacs-lisp
   (define-prefix-command 'org-custom-map)
+  (global-unset-key (kbd "M-`"))
   (global-set-key (kbd "M-`") 'org-custom-map)
   (global-set-key (kbd "M-` a") 'org-agenda)
   (global-set-key (kbd "M-` b") 'org-iswitchb)
   (global-set-key (kbd "M-` c") 'org-capture)
   (global-set-key (kbd "M-` d") 'org-decrypt-entry)
   (global-set-key (kbd "M-` e") 'org-encrypt-entry)
-  (global-set-key (kbd "M-` g") 'org-mobile-pull)
+;  (global-set-key (kbd "M-` g") 'org-mobile-pull)
   (global-set-key (kbd "M-` l") 'org-store-link)
-  (global-set-key (kbd "M-` p") 'org-mobile-push)
-  (global-set-key (kbd "M-` t") 'bh/org-todo)
-  (global-set-key (kbd "M-` w") 'bh/widen)
+;  (global-set-key (kbd "M-` p") 'org-mobile-push)
+;  (global-set-key (kbd "M-` t") 'bh/org-todo)
+;  (global-set-key (kbd "M-` w") 'bh/widen)
 
   ;; Clocking
   (define-prefix-command 'org-custom-clock-map)
   (global-set-key (kbd "M-` M-c") 'org-custom-map)
-  (global-set-key (kbd "M-` M-c i") 'bh/punch-in)
-  (global-set-key (kbd "M-` M-c o") 'bh/punch-out)
-  (global-set-key (kbd "M-` M-c SPC") 'bh/clock-in-last-task)
-  (global-set-key (kbd "M-` M-c g") 'org-clock-goto)
-  (global-set-key (kbd "M-` M-c n") 'org-clock-in)
+;  (global-set-key (kbd "M-` M-c i") 'bh/punch-in)
+;  (global-set-key (kbd "M-` M-c o") 'bh/punch-out)
+;  (global-set-key (kbd "M-` M-c SPC") 'bh/clock-in-last-task)
+;  (global-set-key (kbd "M-` M-c g") 'org-clock-goto)
+;  (global-set-key (kbd "M-` M-c n") 'org-clock-in)
+(message "** Keys")
 #+end_src
 
 ** Org Capture
@@ -529,13 +815,14 @@
 (define-key global-map "\C-cc" 'org-capture)
 
 (setq org-capture-templates
-      '(("t" "Todo" entry (file+headline "~/org/todo.org" "Tasks")
-             "* TODO %?\n  %i\n  \n%a\n%U\n")
+      '(;("t" "Todo" entry (file+headline "~/org/todo.org" "Tasks")
+        ;     "* TODO %?\n  %i\n  \n%a\n%U\n")
         ("n" "Note" entry (file+datetree "~/org/notes.org")
-             "* %?\nEntered on %U\n  %i\n  %a\n")))
+             "* %?\nEntered on %U\n  %i\n  %a\n"
+             :empty-lines 1)))
 
 (custom-set-variables
- '(org-agenda-files (quote ("~/org/todo.org" "~/org/money.org")))
+ '(org-agenda-files (quote ("~/org/notes.org")))
  '(org-agenda-ndays 7)
  '(org-deadline-warning-days 14)
  '(org-agenda-show-all-dates t)
@@ -561,6 +848,7 @@
                 (org-agenda-skip-entry-if (quote scheduled) (quote deadline)
                                           (quote regexp) "\n]+>")))
              (org-agenda-overriding-header "Unscheduled TODO entries: ")))))))
+(message "** Org Capture")
 #+end_src
 
 ** Org Speed
@@ -576,31 +864,34 @@
 ;                                      ("C" . self-insert-command)
                                       ("J" . org-clock-goto))))
 
+(message "** Org Speed")
 #+end_src
 
 ** Org Babel
 http://orgmode.org/worg/org-contrib/babel/intro.html
 #+begin_src emacs-lisp
-(setq org-ditaa-jar-path "~/.emacs.d/src/java/ditaa.jar")
-(setq org-plantuml-jar-path "~/.emacs.d/src/java/plantuml.jar")
+  (setq org-ditaa-jar-path "~/.emacs.d/src/java/ditaa.jar")
+  (setq org-plantuml-jar-path "~/.emacs.d/src/java/plantuml.jar")
 
-(add-hook 'org-babel-after-execute-hook 'org-display-inline-images 'append)
+  (add-hook 'org-babel-after-execute-hook 'org-display-inline-images 'append)
 
-(org-babel-do-load-languages
-  (quote org-babel-load-languages)
-  (quote ((emacs-lisp . t)
-          (dot . t)
-          (ditaa . t)
-          (R . t)
-          (python . t)
-          (ruby . nil)
-          (gnuplot . t)
-          (clojure . nil)
-          (sh . t)
-          (ledger . t)
-          (org . t)
-          (plantuml . t)
-          (latex . t))))
+  ;; (org-babel-do-load-languages
+  ;;  'org-babel-load-languages
+  ;;  '((emacs-lisp . t)
+  ;;    (dot . t)
+  ;;    (ditaa . t)
+  ;;    (R . t)
+  ;;    (python . t)
+  ;;    (ruby . nil)
+  ;;    (gnuplot . t)
+  ;;    (clojure . t)
+  ;;    (sql . t)
+  ;;    (sh . t)
+  ;;    (ledger . t)
+  ;;    (org . t)
+  ;;    (plantuml . t)
+  ;;    (latex . t)))
+  (message "** Org Babel")
 #+end_src
 
 ** Org Protocol
@@ -609,6 +900,7 @@ http://orgmode.org/worg/org-contrib/babel/intro.html
   (server-start)
 ; (server-force-delete) to clear
   (require 'org-protocol)
+(message "** Org Protocol")
 #+end_src
 
 
@@ -617,6 +909,7 @@ http://orgmode.org/worg/org-contrib/babel/intro.html
   (setq org-mobile-inbox-for-pull "~/org/inbox.org")
   (setq org-mobile-directory "~/org/MobileOrg")
   (setq org-mobile-files '(org-agenda-files org-agenda-text-search-extra-files "~/org/"))
+(message "** OrgMobile")
 #+end_src
 *** OrgMobile Mercurial
 #+begin_src emacs-lisp
@@ -667,6 +960,7 @@ http://orgmode.org/worg/org-contrib/babel/intro.html
                                  (org-mobile-check-modified-timer))))
 
     (org-mobile-check-modified-timer)
+(message "*** OrgMobile Mercurial")
 #+end_src
 
 ** Org Crypt
@@ -679,6 +973,7 @@ http://orgmode.org/worg/org-contrib/babel/intro.html
 ;; GPG key to use for encryption
 ;; Either the Key ID or set to nil to use symmetric encryption.
 (setq org-crypt-key nil)
+(message "** Org Crypt")
 #+end_src
 
 #+results:
@@ -686,12 +981,13 @@ http://orgmode.org/worg/org-contrib/babel/intro.html
 ** Orgxy
 #+begin_src emacs-lisp
 (setq org-icalendar-include-todo t)
-(load (expand-file-name "~/Code/orgxy/Orgxy/orgxy.el"))
+;(load (expand-file-name "~/Code/orgxy/Orgxy/orgxy.el"))
+(message "** Orgxy")
 #+end_src
 
 
 
-* "Mastering Emacs" tips
+* "Mastering Emacs" 
 #+begin_src emacs-lisp
 (setq reb-re-syntax 'string)
 
@@ -701,75 +997,104 @@ http://orgmode.org/worg/org-contrib/babel/intro.html
 
 (define-key isearch-mode-map (kbd "C-o") 'isearch-occur)
 
+(message "* Mastering Emacs")
 #+end_src
 
+
+* Registers
+#+begin_src emacs-lisp
+
+(defun file-to-register (filename)
+  (interactive "fFilename: ")
+  (set-register (register-read-with-preview "Register: ")
+                `(file . ,filename)))
+
+(define-key ctl-x-r-map (kbd "C-f") 'file-to-register)
+(define-key ctl-x-r-map (kbd "C-k") 'kmacro-to-register)
+
+(setq register-preview-delay 0)
+(message "* Registers")
+#+end_src
+
+
+
+
+* VirtualEnv
+#+begin_src emacs-lisp
+(setq python-environment-virtualenv '("/opt/local/bin/virtualenv-2.7" "--system-site-packages" "--quiet"))
+(message "* VirtualEnv")
+#+end_src
+
+;; smartparens
+;; floobits
+
+
+* EMMS
+  (require 'emms-setup)
+  (emms-standard)
+  (emms-default-players)
+
+  (require 'emms-player-mpd)
+  (setq emms-player-mpd-server-name "localhost")
+  (setq emms-player-mpd-server-port "6600")
+  ;(setq emms-player-mpd-server-password "mypassword")
+  (add-to-list 'emms-info-functions 'emms-info-mpd)
+  (add-to-list 'emms-player-list 'emms-player-mpd)
+  (setq emms-player-mpd-music-directory (expand-file-name "~/Music/download"))
+
+  (require 'emms-volume)
+  (setq emms-volume-change-function 'emms-volume-mpd-change)
+
+  (require 'emms-mode-line)
+  (emms-mode-line 1)
+
+  (require 'emms-playing-time)
+  (emms-playing-time 1)
+
+  (emms-playing-time-enable-display)
 
 * Foo
-#+begin_src emacs-lisp
-(require 'thingatpt)
+#+begin_src emacs_lisp
+(if (fboundp 'save-place-mode)
+  (save-place-mode +1)
+  (setq-default save-place t))
 
-(defun thing-at-point-goto-end-of-integer ()
-  "Go to end of integer at point."
-  (let ((inhibit-changing-match-data t))
-    ;; Skip over optional sign
-    (when (looking-at "[+-]")
-      (forward-char 1))
-    ;; Skip over digits
-    (skip-chars-forward "[[:digit:]]")
-    ;; Check for at least one digit
-    (unless (looking-back "[[:digit:]]")
-      (error "No integer here"))))
-
-(put 'integer 'beginning-op 'thing-at-point-goto-end-of-integer)
-
-(defun thing-at-point-goto-beginning-of-integer ()
-  "Go to end of integer at point."
-  (let ((inhibit-changing-match-data t))
-    ;; Skip backward over digits
-    (skip-chars-backward "[[:digit:]]")
-    ;; Check for digits and optional sign
-    (unless (looking-at "[+-]?[[:digit:]]")
-      (error "No integer here"))
-    ;; Skip backward over optional sign
-    (when (looking-back "[+-]")
-        (backward-char 1))))
-
-(put 'integer 'beginning-op 'thing-at-point-goto-beginning-of-integer)
-
-(defun thing-at-point-bounds-of-integer-at-point ()
-  "Get boundaries of integer at point."
-  (save-excursion
-    (let (beg end)
-      (thing-at-point-goto-beginning-of-integer)
-      (setq beg (point))
-      (thing-at-point-goto-end-of-integer)
-      (setq end (point))
-      (cons beg end))))
-
-(put 'integer 'bounds-of-thing-at-point 'thing-at-point-bounds-of-integer-at-point)
-
-(defun thing-at-point-integer-at-point ()
-  "Get integer at point."
-  (let ((bounds (bounds-of-thing-at-point 'integer)))
-    (string-to-number (buffer-substring (car bounds) (cdr bounds)))))
-
-(put 'integer 'thing-at-point 'thing-at-point-integer-at-point)
-
-(defun increment-integer-at-point (&optional inc)
-  "Increment integer at point by one.
-
-With numeric prefix arg INC, increment the integer by INC amount."
-  (interactive "p")
-  (let ((inc (or inc 1))
-        (n (thing-at-point 'integer))
-        (bounds (bounds-of-thing-at-point 'integer)))
-    (delete-region (car bounds) (cdr bounds))
-    (insert (int-to-string (+ n inc)))))
-
-(defun decrement-integer-at-point (&optional dec)
-  "Decrement integer at point by one.
-
-With numeric prefix arg DEC, decrement the integer by DEC amount."
-  (interactive "p")
-  (increment-integer-at-point (- (or dec 1))))
 #+end_src
+
+* Things to learn
+C-u M-^
+M-^
+align-regexp
+(defun bjm/align-whitespace (start end)
+  "Align columns by whitespace"
+  (interactive "r")
+  (align-regexp start end
+                "\\(\\s-*\\)\\s-" 1 0 t))
+
+align-to : prompt for char
+
+
+(defun align-to-colon (begin end)
+  "Align region to colon (:) signs"
+  (interactive "r")
+  (align-regexp begin end
+                (rx (group (zero-or-more (syntax whitespace))) ":") 1 1 ))
+
+(defun align-to-comma (begin end)
+  "Align region to comma  signs"
+  (interactive "r")
+  (align-regexp begin end
+                (rx "," (group (zero-or-more (syntax whitespace))) ) 1 1 ))
+
+
+(defun align-to-equals (begin end)
+  "Align region to equal signs"
+  (interactive "r")
+  (align-regexp begin end
+                (rx (group (zero-or-more (syntax whitespace))) "=") 1 1 ))
+
+(defun align-to-hash (begin end)
+  "Align region to hash ( => ) signs"
+  (interactive "r")
+  (align-regexp begin end
+                (rx (group (zero-or-more (syntax whitespace))) "=>") 1 1 ))

@@ -1,0 +1,6 @@
+*
+!init.el
+!_emacs.org
+!emacs-custom.el
+!sql-connections.el.gpg
+!.gitignore
